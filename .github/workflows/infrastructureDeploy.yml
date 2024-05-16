@@ -3,15 +3,36 @@ name: Infrastructure Deployment
 on:
   push:
     branches: [ "main" ]
-
+    paths:
+      -'infrastructure/**'
 
 
 jobs:
   deploy:
     name: Terraform settings
     runs-on: ubuntu-latest
+    env:
+      ARM_CLIENT_ID: ${{ secrets.AZURE_AD_CLIENT_ID }}
+      ARM_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
+      ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ARM_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
     steps:
     - name: Check out the repo
       uses: actions/checkout@v3
-    - name: Terraform version
-      run: terraform version
+      
+    - name: Terraform init
+      run: terraform init -backend-config="sas_token=${{ secrets.SAS_TOKEN }}"
+      working-directory: ./infrastructure
+
+    - name: Terraform validate
+      run: terraform validate
+      working-directory: ./infrastructure
+
+
+    - name: Terraform plan
+      run: terraform plan -var-file terraform.tfvars -out=plan.out
+      working-directory: ./infrastructure
+
+    - name: Terraform apply
+      run: terraform apply -var-file terraform.tfvars -auto-approve
+      working-directory: ./infrastructure
